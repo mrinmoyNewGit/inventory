@@ -233,8 +233,8 @@
     </li>
 @endcan
 
-@can('access_reports')
-    <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('*-report.index') ? 'c-show' : '' }}">
+<!-- @can('access_reports') -->
+    <!-- <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('*-report.index') ? 'c-show' : '' }}">
         <a class="c-sidebar-nav-link c-sidebar-nav-dropdown-toggle" href="#">
             <i class="c-sidebar-nav-icon bi bi-graph-up" style="line-height: 1;"></i> Reports
         </a>
@@ -270,8 +270,8 @@
                 </a>
             </li>
         </ul>
-    </li>
-@endcan
+    </li> -->
+<!-- @endcan -->
 
 @can('access_user_management')
     <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('roles*') ? 'c-show' : '' }}">
