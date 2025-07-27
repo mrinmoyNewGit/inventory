@@ -1,14 +1,9 @@
-<picture>
-    <source srcset="public/images/logo.png"  
-            media="(prefers-color-scheme: dark)">
-    <img src="public/images/logo-dark.png" alt="App Logo">
-</picture>
+
 
 > **Important Note:** This Project is ready for Production. But use code from main branch only. If you find any bug or have any suggestion please create an Issue.
 
 # Local Installation
 
-- run `` git clone https://github.com/FahimAnzamDip/triangle-pos.git ``
 - run ``composer install `` 
 - run `` npm install ``
 - run ``npm run dev``
@@ -33,11 +28,7 @@ This will start the application along with the mysql database using docker compo
 # Admin Credentials
 > Email: super.admin@test.com || Password: 12345678
 
-## Demo
-![Triangle POS](public/images/screenshot.jpg)
-**Live Demo:** will update soon
 
-## Triangle POS Features
 
 - **Products Management & Barcode Printing**
 - **Stock Management**
@@ -54,5 +45,3 @@ This will start the application along with the mysql database using docker compo
 - **System Settings**
 - **Reports**
 
-# License
-**[Creative Commons Attribution 4.0	cc-by-4.0](https://creativecommons.org/licenses/by/4.0/)**
