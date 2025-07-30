@@ -21,6 +21,7 @@ class CreateProductsTable extends Migration
             $table->string('product_barcode_symbology')->nullable();
             $table->integer('product_quantity');
             $table->integer('product_cost');
+            $table->integer('total_price');
             $table->integer('product_price');
             $table->string('product_unit')->nullable();
             $table->integer('product_stock_alert');

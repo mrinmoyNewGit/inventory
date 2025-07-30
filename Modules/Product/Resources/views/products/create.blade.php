@@ -58,15 +58,23 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="barcode_symbology">Barcode Symbology <span class="text-danger">*</span></label>
-                                        <select class="form-control" name="product_barcode_symbology" id="barcode_symbology" required>
-                                            <option value="" selected disabled>Select Symbology</option>
-                                            <option value="C128">Code 128</option>
-                                            <option value="C39">Code 39</option>
-                                            <option value="UPCA">UPC-A</option>
-                                            <option value="UPCE">UPC-E</option>
-                                            <option selected value="EAN13">EAN-13</option><option value="EAN8">EAN-8</option>
-                                        </select>
+                                        <label for="total_price">Total Price <span class="text-danger">*</span></label>
+                                        <input id="total_price" type="text" class="form-control" name="total_price" required value="{{ old('total_price') }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                 
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="product_quantity">Quantity <span class="text-danger">*</span></label>
+                                        <input type="number" id="product_quantity" class="form-control" name="product_quantity" required value="{{ old('product_quantity') }}" min="1">
+                                    </div>
+                                </div>
+                                 <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="product_stock_alert">Alert Quantity <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" name="product_stock_alert" required value="{{ old('product_stock_alert', 0) }}" min="0" max="100">
                                     </div>
                                 </div>
                             </div>
@@ -74,7 +82,7 @@
                             <div class="form-row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="product_cost">Cost <span class="text-danger">*</span></label>
+                                        <label for="product_cost">MRP <span class="text-danger">*</span></label>
                                         <input id="product_cost" type="text" class="form-control" name="product_cost" required value="{{ old('product_cost') }}">
                                     </div>
                                 </div>
@@ -82,21 +90,6 @@
                                     <div class="form-group">
                                         <label for="product_price">Price <span class="text-danger">*</span></label>
                                         <input id="product_price" type="text" class="form-control" name="product_price" required value="{{ old('product_price') }}">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="product_quantity">Quantity <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="product_quantity" required value="{{ old('product_quantity') }}" min="1">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <label for="product_stock_alert">Alert Quantity <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" name="product_stock_alert" required value="{{ old('product_stock_alert', 0) }}" min="0" max="100">
                                     </div>
                                 </div>
                             </div>
@@ -218,7 +211,8 @@
     <script src="{{ asset('js/jquery-mask-money.js') }}"></script>
     <script>
         $(document).ready(function () {
-            $('#product_cost').maskMoney({
+            
+             $('#product_cost').maskMoney({
                 prefix:'{{ settings()->currency->symbol }}',
                 thousands:'{{ settings()->currency->thousand_separator }}',
                 decimal:'{{ settings()->currency->decimal_separator }}',
@@ -236,6 +230,21 @@
                 $('#product_price').val(product_price);
             });
         });
+    </script>
+    <script>
+     function calculatePerUnitCost() {
+            let total = parseFloat($('#total_price').val()) || 0;
+            let quantity = parseFloat($('#product_quantity').val()) || 0;
+
+            if (quantity > 0) {
+                let perUnit = total / quantity;
+                $('#product_price').val(perUnit.toFixed(2));
+            } else {
+                $('#product_price').val('');
+            }
+        }
+
+        $('#total_price, #product_quantity').on('input', calculatePerUnitCost);
     </script>
 @endpush
 

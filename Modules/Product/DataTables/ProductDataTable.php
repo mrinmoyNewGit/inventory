@@ -21,7 +21,7 @@ class ProductDataTable extends DataTable
             })
             ->addColumn('product_image', function ($data) {
                 $url = $data->getFirstMediaUrl('images', 'thumb');
-                return '<img src="'.$url.'" border="0" width="50" class="img-thumbnail" align="center"/>';
+                return '<img src="' . $url . '" border="0" width="50" class="img-thumbnail" align="center"/>';
             })
             ->addColumn('product_price', function ($data) {
                 return format_currency($data->product_price);
@@ -31,6 +31,9 @@ class ProductDataTable extends DataTable
             })
             ->addColumn('product_quantity', function ($data) {
                 return $data->product_quantity . ' ' . $data->product_unit;
+            })
+            ->addColumn('total', function ($data) {
+                return number_format($data->product_quantity*$data->product_price,2);
             })
             ->rawColumns(['product_image']);
     }
@@ -43,23 +46,23 @@ class ProductDataTable extends DataTable
     public function html()
     {
         return $this->builder()
-                    ->setTableId('product-table')
-                    ->columns($this->getColumns())
-                    ->minifiedAjax()
-                    ->dom("<'row'<'col-md-3'l><'col-md-5 mb-2'B><'col-md-4'f>> .
+            ->setTableId('product-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            ->dom("<'row'<'col-md-3'l><'col-md-5 mb-2'B><'col-md-4'f>> .
                                 'tr' .
                                 <'row'<'col-md-5'i><'col-md-7 mt-2'p>>")
-                    ->orderBy(7)
-                    ->buttons(
-                        Button::make('excel')
-                            ->text('<i class="bi bi-file-earmark-excel-fill"></i> Excel'),
-                        Button::make('print')
-                            ->text('<i class="bi bi-printer-fill"></i> Print'),
-                        Button::make('reset')
-                            ->text('<i class="bi bi-x-circle"></i> Reset'),
-                        Button::make('reload')
-                            ->text('<i class="bi bi-arrow-repeat"></i> Reload')
-                    );
+            ->orderBy(7)
+            ->buttons(
+                Button::make('excel')
+                    ->text('<i class="bi bi-file-earmark-excel-fill"></i> Excel'),
+                Button::make('print')
+                    ->text('<i class="bi bi-printer-fill"></i> Print'),
+                Button::make('reset')
+                    ->text('<i class="bi bi-x-circle"></i> Reset'),
+                Button::make('reload')
+                    ->text('<i class="bi bi-arrow-repeat"></i> Reload')
+            );
     }
 
     protected function getColumns()
@@ -82,15 +85,19 @@ class ProductDataTable extends DataTable
                 ->className('text-center align-middle'),
 
             Column::computed('product_cost')
-                ->title('Cost')
+                ->title('MRP/Per Product')
                 ->className('text-center align-middle'),
 
             Column::computed('product_price')
-                ->title('Price')
+                ->title('Price/Per Product')
                 ->className('text-center align-middle'),
 
             Column::computed('product_quantity')
                 ->title('Quantity')
+                ->className('text-center align-middle'),
+
+            Column::computed('total')
+                ->title('Total')
                 ->className('text-center align-middle'),
 
             Column::computed('action')
