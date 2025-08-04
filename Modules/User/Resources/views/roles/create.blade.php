@@ -552,7 +552,7 @@
                                 </div>
 
                                 <!-- Sale Returns Permission -->
-                                <div class="col-lg-4 col-md-6 mb-3">
+                                {{-- <div class="col-lg-4 col-md-6 mb-3">
                                     <div class="card h-100 border-0 shadow">
                                         <div class="card-header">
                                             Sale Returns
@@ -610,7 +610,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <!-- Purchases Permission -->
                                 <div class="col-lg-4 col-md-6 mb-3">
@@ -674,7 +674,7 @@
                                 </div>
 
                                 <!-- Purchases Returns Permission -->
-                                <div class="col-lg-4 col-md-6 mb-3">
+                                {{-- <div class="col-lg-4 col-md-6 mb-3">
                                     <div class="card h-100 border-0 shadow">
                                         <div class="card-header">
                                             Purchase Returns
@@ -732,7 +732,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> --}}
 
                                 <!-- Currencies Permission -->
                                 <div class="col-lg-4 col-md-6 mb-3">

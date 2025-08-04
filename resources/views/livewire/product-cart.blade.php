@@ -34,7 +34,10 @@
                         @foreach($cart_items as $cart_item)
                             <tr>
                                 <td class="align-middle">
-                                    {{ $cart_item->name }} <br>
+                                @if ($cart_instance === 'purchase')
+                                    {{ $cart_item->name }} 
+                                @endif
+                                 <br>
                                     <span class="badge badge-success">
                                         {{ $cart_item->options->code }}
                                     </span>

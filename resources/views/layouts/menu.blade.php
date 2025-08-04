@@ -108,7 +108,7 @@
     </li>
 @endcan
 
-@can('access_purchase_returns')
+{{-- @can('access_purchase_returns')
     <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('purchase-returns.*') || request()->routeIs('purchase-return-payments.*') ? 'c-show' : '' }}">
         <a class="c-sidebar-nav-link c-sidebar-nav-dropdown-toggle" href="#">
             <i class="c-sidebar-nav-icon bi bi-arrow-return-right" style="line-height: 1;"></i> Purchase Returns
@@ -130,7 +130,7 @@
             </li>
         </ul>
     </li>
-@endcan
+@endcan --}}
 
 @can('access_sales')
     <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('sales.*') || request()->routeIs('sale-payments*') ? 'c-show' : '' }}">
@@ -156,7 +156,7 @@
     </li>
 @endcan
 
-@can('access_sale_returns')
+{{-- @can('access_sale_returns')
     <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('sale-returns.*') || request()->routeIs('sale-return-payments.*') ? 'c-show' : '' }}">
         <a class="c-sidebar-nav-link c-sidebar-nav-dropdown-toggle" href="#">
             <i class="c-sidebar-nav-icon bi bi-arrow-return-left" style="line-height: 1;"></i> Sale Returns
@@ -178,7 +178,7 @@
             </li>
         </ul>
     </li>
-@endcan
+@endcan --}}
 
 @can('access_expenses')
     <li class="c-sidebar-nav-item c-sidebar-nav-dropdown {{ request()->routeIs('expenses.*') || request()->routeIs('expense-categories.*') ? 'c-show' : '' }}">
@@ -258,16 +258,16 @@
                     <i class="c-sidebar-nav-icon bi bi-clipboard-data" style="line-height: 1;"></i> Purchases Report
                 </a>
             </li>
-            <li class="c-sidebar-nav-item">
+            {{-- <li class="c-sidebar-nav-item">
                 <a class="c-sidebar-nav-link {{ request()->routeIs('sales-return-report.index') ? 'c-active' : '' }}" href="{{ route('sales-return-report.index') }}">
                     <i class="c-sidebar-nav-icon bi bi-clipboard-data" style="line-height: 1;"></i> Sales Return Report
                 </a>
-            </li>
-            <li class="c-sidebar-nav-item">
+            </li> --}}
+            {{-- <li class="c-sidebar-nav-item">
                 <a class="c-sidebar-nav-link {{ request()->routeIs('purchases-return-report.index') ? 'c-active' : '' }}" href="{{ route('purchases-return-report.index') }}">
                     <i class="c-sidebar-nav-icon bi bi-clipboard-data" style="line-height: 1;"></i> Purchases Return Report
                 </a>
-            </li>
+            </li> --}}
         </ul>
     </li>
 @endcan 
