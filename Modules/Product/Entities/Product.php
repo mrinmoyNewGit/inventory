@@ -55,14 +55,18 @@ class Product extends Model implements HasMedia
     {
         return ($value / 100);
     }
-    
+
     public function getStockInSqftAttribute()
     {
-        return  $this->attributes['product_quantity']* 10.7639;
+        return $this->product_unit === 'SQM'
+            ? $this->product_quantity * 10.7639
+            : $this->product_quantity;
     }
 
     public function getPricePerSqftAttribute()
     {
-        return $this->attributes['product_price'] / 10.7639;
+        return $this->product_unit === 'SQM'
+            ? $this->product_price / 10.7639
+            : $this->product_price;
     }
 }
