@@ -18,14 +18,16 @@ use Modules\Sale\Http\Requests\UpdateSaleRequest;
 class SaleController extends Controller
 {
 
-    public function index(SalesDataTable $dataTable) {
+    public function index(SalesDataTable $dataTable)
+    {
         abort_if(Gate::denies('access_sales'), 403);
 
         return $dataTable->render('sale::index');
     }
 
 
-    public function create() {
+    public function create()
+    {
         abort_if(Gate::denies('create_sales'), 403);
 
         Cart::instance('sale')->destroy();
@@ -34,7 +36,8 @@ class SaleController extends Controller
     }
 
 
-    public function store(StoreSaleRequest $request) {
+    public function store(StoreSaleRequest $request)
+    {
         DB::transaction(function () use ($request) {
             $due_amount = $request->total_amount - $request->paid_amount;
 
@@ -81,9 +84,19 @@ class SaleController extends Controller
 
                 if ($request->status == 'Shipped' || $request->status == 'Completed') {
                     $product = Product::findOrFail($cart_item->id);
-                    $product->update([
-                        'product_quantity' => $product->product_quantity - $cart_item->qty
-                    ]);
+
+                    if ($product->product_unit === 'SQM') {
+                        // Convert sold sqft quantity back to sqm before subtracting
+                        $qty_in_sqm = $cart_item->qty / 10.7639;
+                        $product->update([
+                            'product_quantity' => round($product->product_quantity - $qty_in_sqm, 4),
+                        ]);
+                    } else {
+                        // For PCS or already in same unit
+                        $product->update([
+                            'product_quantity' => $product->product_quantity - $cart_item->qty,
+                        ]);
+                    }
                 }
             }
 
@@ -92,21 +105,22 @@ class SaleController extends Controller
             if ($sale->paid_amount > 0) {
                 SalePayment::create([
                     'date' => $request->date,
-                    'reference' => 'INV/'.$sale->reference,
+                    'reference' => 'INV/' . $sale->reference,
                     'amount' => $sale->paid_amount,
                     'sale_id' => $sale->id,
-                    'payment_method' => $request->payment_method
+                    'payment_method' => $request->payment_method,
                 ]);
             }
         });
 
         toast('Sale Created!', 'success');
-
         return redirect()->route('sales.index');
     }
 
 
-    public function show(Sale $sale) {
+
+    public function show(Sale $sale)
+    {
         abort_if(Gate::denies('show_sales'), 403);
 
         $customer = Customer::findOrFail($sale->customer_id);
@@ -115,7 +129,8 @@ class SaleController extends Controller
     }
 
 
-    public function edit(Sale $sale) {
+    public function edit(Sale $sale)
+    {
         abort_if(Gate::denies('edit_sales'), 403);
 
         $sale_details = $sale->saleDetails;
@@ -125,6 +140,15 @@ class SaleController extends Controller
         $cart = Cart::instance('sale');
 
         foreach ($sale_details as $sale_detail) {
+            $product = Product::findOrFail($sale_detail->product_id);
+
+            // Convert stock and unit if product is in SQM
+            $stock = $product->product_unit === 'SQM'
+                ? round($product->product_quantity * 10.7639, 2)
+                : $product->product_quantity;
+
+            $unit = $product->product_unit === 'SQM' ? 'sqft' : ($product->product_unit ?? 'pcs');
+
             $cart->add([
                 'id'      => $sale_detail->product_id,
                 'name'    => $sale_detail->product_name,
@@ -132,14 +156,15 @@ class SaleController extends Controller
                 'price'   => $sale_detail->price,
                 'weight'  => 1,
                 'options' => [
-                    'product_discount' => $sale_detail->product_discount_amount,
+                    'product_discount'      => $sale_detail->product_discount_amount,
                     'product_discount_type' => $sale_detail->product_discount_type,
-                    'sub_total'   => $sale_detail->sub_total,
-                    'code'        => $sale_detail->product_code,
-                    'stock'       => Product::findOrFail($sale_detail->product_id)->product_quantity,
-                    'product_tax' => $sale_detail->product_tax_amount,
-                    'unit_price'  => $sale_detail->unit_price
-                ]
+                    'sub_total'             => $sale_detail->sub_total,
+                    'code'                  => $sale_detail->product_code,
+                    'stock'                 => $stock,
+                    'unit'                  => $unit,
+                    'product_tax'           => $sale_detail->product_tax_amount,
+                    'unit_price'            => $sale_detail->unit_price,
+                ],
             ]);
         }
 
@@ -147,7 +172,9 @@ class SaleController extends Controller
     }
 
 
-    public function update(UpdateSaleRequest $request, Sale $sale) {
+
+    public function update(UpdateSaleRequest $request, Sale $sale)
+    {
         DB::transaction(function () use ($request, $sale) {
 
             $due_amount = $request->total_amount - $request->paid_amount;
@@ -160,16 +187,27 @@ class SaleController extends Controller
                 $payment_status = 'Paid';
             }
 
+            // Restore previous stock
             foreach ($sale->saleDetails as $sale_detail) {
-                if ($sale->status == 'Shipped' || $sale->status == 'Completed') {
+                if ($sale->status === 'Shipped' || $sale->status === 'Completed') {
                     $product = Product::findOrFail($sale_detail->product_id);
+
+                    // Restore stock in SQM if unit is SQM
+                    if ($product->product_unit === 'SQM') {
+                        $restored_qty = $sale_detail->quantity / 10.7639; // from sqft to sqm
+                    } else {
+                        $restored_qty = $sale_detail->quantity;
+                    }
+
                     $product->update([
-                        'product_quantity' => $product->product_quantity + $sale_detail->quantity
+                        'product_quantity' => $product->product_quantity + $restored_qty
                     ]);
                 }
+
                 $sale_detail->delete();
             }
 
+            // Update sale data
             $sale->update([
                 'date' => $request->date,
                 'reference' => $request->reference,
@@ -189,6 +227,7 @@ class SaleController extends Controller
                 'discount_amount' => Cart::instance('sale')->discount() * 100,
             ]);
 
+            // Store new sale details and deduct stock
             foreach (Cart::instance('sale')->content() as $cart_item) {
                 SaleDetails::create([
                     'sale_id' => $sale->id,
@@ -204,10 +243,18 @@ class SaleController extends Controller
                     'product_tax_amount' => $cart_item->options->product_tax * 100,
                 ]);
 
-                if ($request->status == 'Shipped' || $request->status == 'Completed') {
+                if ($request->status === 'Shipped' || $request->status === 'Completed') {
                     $product = Product::findOrFail($cart_item->id);
+
+                    // Deduct in SQM if product is in SQM
+                    if ($product->product_unit === 'SQM') {
+                        $deduct_qty = $cart_item->qty / 10.7639; // from sqft to sqm
+                    } else {
+                        $deduct_qty = $cart_item->qty;
+                    }
+
                     $product->update([
-                        'product_quantity' => $product->product_quantity - $cart_item->qty
+                        'product_quantity' => $product->product_quantity - $deduct_qty
                     ]);
                 }
             }
@@ -221,7 +268,9 @@ class SaleController extends Controller
     }
 
 
-    public function destroy(Sale $sale) {
+
+    public function destroy(Sale $sale)
+    {
         abort_if(Gate::denies('delete_sales'), 403);
 
         $sale->delete();
