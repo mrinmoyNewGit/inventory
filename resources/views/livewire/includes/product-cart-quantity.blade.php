@@ -17,21 +17,22 @@
         </div>
     </div>
 @else
-    {{-- Sale Input: Height × Width = Qty --}}
-    <div x-data="{
-        height: 0,
-        width: 0,
-        qty: 1,
-        get total() {
-            return (this.height * this.width * this.qty).toFixed(2);
-        },
-        updateQuantity() {
-            $wire.set('quantity.{{ $pid }}', parseFloat(this.total));
-        }
-    }"
-    x-init="updateQuantity();"
-    @input.debounce.300ms="updateQuantity"
-    class="d-flex align-items-center justify-content-center gap-1"
+    {{-- Sale Input: Height × Width × Qty = Total sqft --}}
+    <div
+        x-data="{
+            height: $wire.entangle('height.{{ $pid }}'),
+            width: $wire.entangle('width.{{ $pid }}'),
+            qty: $wire.entangle('piece_qty.{{ $pid }}'),
+            get total() {
+                return (this.height * this.width * this.qty).toFixed(2);
+            },
+            updateQuantity() {
+                $wire.set('quantity.{{ $pid }}', parseFloat(this.total));
+            }
+        }"
+        x-init="updateQuantity()"
+        @input.debounce.300ms="updateQuantity"
+        class="d-flex align-items-center justify-content-center gap-1"
     >
 
         {{-- Height --}}
@@ -57,10 +58,10 @@
                placeholder="W"
                title="Width (ft)">
 
-        {{-- = --}}
-        <span class="mx-1">x</span>
+        {{-- × --}}
+        <span class="mx-1">×</span>
 
-        {{-- Quantity --}}
+        {{-- Piece Qty --}}
         <input type="number"
                x-model.number="qty"
                step="1"
@@ -70,8 +71,10 @@
                placeholder="Qty"
                title="Number of Pieces">
 
-        {{-- Total Area Display --}}
+        {{-- = --}}
         <span class="mx-1">=</span>
+
+        {{-- Total sqft --}}
         <div class="input-group input-group-sm" style="width: 100px;">
             <input x-bind:value="total"
                    class="form-control text-center"
@@ -86,7 +89,7 @@
             </div>
         </div>
 
-        {{-- Hidden sync --}}
+        {{-- Hidden quantity (total sqft) synced with Livewire --}}
         <input type="hidden" wire:model="quantity.{{ $pid }}" />
     </div>
 @endif
