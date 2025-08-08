@@ -22,7 +22,14 @@
                     <th class="align-middle">Product</th>
                     <th class="align-middle text-center">Net Unit Price</th>
                     <th class="align-middle text-center">Stock</th>
-                    <th class="align-middle text-center">Quantity</th>
+                    <th class="align-middle text-center">
+                        @if($cart_instance === 'purchase')
+                            Quantity
+                        @else
+                            Total Area (sqft)
+                        @endif
+                    </th>
+
                     <th class="align-middle text-center">Discount</th>
                     <th class="align-middle text-center">Tax</th>
                     <th class="align-middle text-center">Sub Total</th>
