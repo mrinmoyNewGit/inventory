@@ -1,9 +1,9 @@
 @php $pid = $cart_item->id; @endphp
 
 @if($cart_instance === 'purchase')
-    {{-- Original Purchase Input --}}
+    {{-- Purchase Qty --}}
     <div class="input-group d-flex justify-content-center">
-        <input wire:model="quantity.{{ $pid }}"
+        <input wire:model.defer="quantity.{{ $pid }}"
                type="number"
                min="1"
                class="form-control"
@@ -17,27 +17,12 @@
         </div>
     </div>
 @else
-    {{-- Sale Input: Height × Width × Qty = Total sqft --}}
-    <div
-        x-data="{
-            height: $wire.entangle('height.{{ $pid }}'),
-            width: $wire.entangle('width.{{ $pid }}'),
-            qty: $wire.entangle('piece_qty.{{ $pid }}'),
-            get total() {
-                return (this.height * this.width * this.qty).toFixed(2);
-            },
-            updateQuantity() {
-                $wire.set('quantity.{{ $pid }}', parseFloat(this.total));
-            }
-        }"
-        x-init="updateQuantity()"
-        @input.debounce.300ms="updateQuantity"
-        class="d-flex align-items-center justify-content-center gap-1"
-    >
+    {{-- Sale Input --}}
+    <div class="d-flex align-items-center justify-content-center gap-1">
 
         {{-- Height --}}
         <input type="number"
-               x-model.number="height"
+               wire:model.defer="height.{{ $pid }}"
                step="0.01"
                min="0"
                class="form-control form-control-sm text-center"
@@ -50,7 +35,7 @@
 
         {{-- Width --}}
         <input type="number"
-               x-model.number="width"
+               wire:model.defer="width.{{ $pid }}"
                step="0.01"
                min="0"
                class="form-control form-control-sm text-center"
@@ -63,7 +48,7 @@
 
         {{-- Piece Qty --}}
         <input type="number"
-               x-model.number="qty"
+               wire:model.defer="piece_qty.{{ $pid }}"
                step="1"
                min="1"
                class="form-control form-control-sm text-center"
@@ -74,9 +59,9 @@
         {{-- = --}}
         <span class="mx-1">=</span>
 
-        {{-- Total sqft --}}
+        {{-- Total --}}
         <div class="input-group input-group-sm" style="width: 100px;">
-            <input x-bind:value="total"
+            <input value="{{ number_format(($height[$pid] ?? 0) * ($width[$pid] ?? 0) * ($piece_qty[$pid] ?? 0), 2) }}"
                    class="form-control text-center"
                    readonly
                    style="background-color: #e9ecef;">
@@ -89,7 +74,5 @@
             </div>
         </div>
 
-        {{-- Hidden quantity (total sqft) synced with Livewire --}}
-        <input type="hidden" wire:model="quantity.{{ $pid }}" />
     </div>
 @endif

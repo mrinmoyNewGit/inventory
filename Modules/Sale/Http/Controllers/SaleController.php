@@ -201,7 +201,7 @@ class SaleController extends Controller
             } else {
                 $payment_status = 'Paid';
             }
-            dd($sale->saleDetails);
+            // dd($sale->saleDetails);
 
             // Restore previous stock
             foreach ($sale->saleDetails as $sale_detail) {

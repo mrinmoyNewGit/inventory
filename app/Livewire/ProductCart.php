@@ -134,7 +134,9 @@ class ProductCart extends Component
 
     public function productSelected($product)
     {
+        // dd($product);
         $cart = Cart::instance($this->cart_instance);
+        //dd($cart);
 
         $exists = $cart->search(function ($cartItem, $rowId) use ($product) {
             return $cartItem->id == $product['id'];
@@ -190,6 +192,7 @@ class ProductCart extends Component
                 'piece_qty'  => $piece_qty,
             ],
         ]);
+        // dd($cart);
 
         $this->check_quantity[$product_model->id] = $stock;
         $this->quantity[$product_model->id] = $qty;
@@ -241,31 +244,54 @@ class ProductCart extends Component
     //         ]
     //     ]);
     // }
-    public function updateQuantity($row_id, $product_id)
-    {
-        if ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return') {
-            if ($this->check_quantity[$product_id] < $this->quantity[$product_id]) {
-                session()->flash('message', 'The requested quantity is not available in stock.');
-                return;
-            }
+
+public function updateQuantity($row_id, $product_id)
+{
+    // For sale or purchase return, calculate quantity from dimensions
+    if ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return') {
+        $calculated_qty = ($this->height[$product_id] ?? 0) 
+                        * ($this->width[$product_id] ?? 0) 
+                        * ($this->piece_qty[$product_id] ?? 0);
+
+        $this->quantity[$product_id] = $calculated_qty;
+
+        // Stock check
+        if ($this->check_quantity[$product_id] < $calculated_qty) {
+            session()->flash('message', 'The requested quantity is not available in stock.');
+            return;
         }
-
-        // Update quantity
-        Cart::instance($this->cart_instance)->update($row_id, $this->quantity[$product_id]);
-
-        // Get updated cart item
-        $cart_item = Cart::instance($this->cart_instance)->get($row_id);
-
-        // Merge old options with new sub_total (preserves height, width, piece_qty, etc.)
-        $updated_options = array_merge($cart_item->options->toArray(), [
-            'sub_total' => $cart_item->price * $cart_item->qty,
-        ]);
-
-        // Update options
-        Cart::instance($this->cart_instance)->update($row_id, [
-            'options' => $updated_options,
-        ]);
     }
+
+    // Update the cart quantity
+    Cart::instance($this->cart_instance)->update($row_id, $this->quantity[$product_id]);
+
+    // Get the updated cart item
+    $cart_item = Cart::instance($this->cart_instance)->get($row_id);
+
+    // Rebuild full options array (preserve everything)
+    $options = [
+        'sub_total'             => $cart_item->price * $cart_item->qty,
+        'code'                  => $cart_item->options->code ?? $this->product_code[$product_id] ?? '',
+        'stock'                 => $cart_item->options->stock ?? null,
+        'unit'                  => $cart_item->options->unit ?? null,
+        'product_tax'           => $cart_item->options->product_tax ?? null,
+        'unit_price'            => $cart_item->options->unit_price ?? null,
+        'product_discount'      => $cart_item->options->product_discount ?? null,
+        'product_discount_type' => $cart_item->options->product_discount_type ?? null,
+
+        // New fields
+        'height'                => $this->height[$product_id] ?? null,
+        'width'                 => $this->width[$product_id] ?? null,
+        'piece_qty'             => $this->piece_qty[$product_id] ?? null,
+    ];
+
+    // Update cart item with full options
+    Cart::instance($this->cart_instance)->update($row_id, [
+        'options' => $options
+    ]);
+}
+
+
 
 
     public function updatedDiscountType($value, $name)
