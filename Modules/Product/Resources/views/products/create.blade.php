@@ -238,9 +238,9 @@
 
             if (quantity > 0) {
                 let perUnit = total / quantity;
-                $('#product_price').val(perUnit.toFixed(2));
+                $('#product_cost').val(perUnit.toFixed(2));
             } else {
-                $('#product_price').val('');
+                $('#product_cost').val('');
             }
         }
 
