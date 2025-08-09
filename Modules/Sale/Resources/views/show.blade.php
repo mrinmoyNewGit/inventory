@@ -64,7 +64,10 @@
                                 <tr>
                                     <th class="align-middle">Product</th>
                                     <th class="align-middle">Net Unit Price</th>
-                                    <th class="align-middle">Quantity</th>
+                                    <th class="align-middle">Height</th>
+                                    <th class="align-middle">Width</th>
+                                    <th class="align-middle">Pieces</th>
+                                    <th class="align-middle">Quantity (sqft)</th>
                                     <th class="align-middle">Discount</th>
                                     <th class="align-middle">Tax</th>
                                     <th class="align-middle">Sub Total</th>
@@ -79,6 +82,22 @@
 
                                         <td class="align-middle">{{ format_currency($item->unit_price) }}</td>
 
+                                        {{-- Height --}}
+                                        <td class="align-middle">
+                                            {{ $item->height ?? ($item->options['height'] ?? '-') }}
+                                        </td>
+
+                                        {{-- Width --}}
+                                        <td class="align-middle">
+                                            {{ $item->width ?? ($item->options['width'] ?? '-') }}
+                                        </td>
+
+                                        {{-- Pieces --}}
+                                        <td class="align-middle">
+                                            {{ $item->piece_qty ?? ($item->options['piece_qty'] ?? '-') }}
+                                        </td>
+
+                                        {{-- Quantity (sqft) --}}
                                         <td class="align-middle">
                                             {{ $item->quantity }}
                                         </td>

@@ -56,6 +56,9 @@
                             <thead>
                             <tr>
                                 <th class="align-middle">Product</th>
+                                <th class="align-middle">Height</th>
+                                <th class="align-middle">Width</th>
+                                <th class="align-middle">Piece Qty</th>
                                 <th class="align-middle">Net Unit Price</th>
                                 <th class="align-middle">Quantity</th>
                                 <th class="align-middle">Discount</th>
@@ -66,27 +69,15 @@
                             <tbody>
                             @foreach($sale->saleDetails as $item)
                                 <tr>
-                                    <td class="align-middle">
-                                         {{ $item->product_code }}
-                                    </td>
-
+                                    <td class="align-middle">{{ $item->product_code }}</td>
+                                    <td class="align-middle">{{ $item->height }}</td>
+                                    <td class="align-middle">{{ $item->width }}</td>
+                                    <td class="align-middle">{{ $item->piece_qty }}</td>
                                     <td class="align-middle">{{ format_currency($item->unit_price) }}</td>
-
-                                    <td class="align-middle">
-                                        {{ $item->quantity }}
-                                    </td>
-
-                                    <td class="align-middle">
-                                        {{ format_currency($item->product_discount_amount) }}
-                                    </td>
-
-                                    <td class="align-middle">
-                                        {{ format_currency($item->product_tax_amount) }}
-                                    </td>
-
-                                    <td class="align-middle">
-                                        {{ format_currency($item->sub_total) }}
-                                    </td>
+                                    <td class="align-middle">{{ $item->quantity }}</td>
+                                    <td class="align-middle">{{ format_currency($item->product_discount_amount) }}</td>
+                                    <td class="align-middle">{{ format_currency($item->product_tax_amount) }}</td>
+                                    <td class="align-middle">{{ format_currency($item->sub_total) }}</td>
                                 </tr>
                             @endforeach
                             </tbody>
