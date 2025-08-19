@@ -36,7 +36,7 @@
                             </div>
                         </div>
                         <div class="form-row">
-                            <div class="col-lg-6">
+                            <div class="col-lg-4">
                                 <div class="form-group">
                                     <label>Status</label>
                                     <select wire:model="sale_status" class="form-control" name="sale_status">
@@ -47,7 +47,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-6">
+                            <div class="col-lg-4">
                                 <div class="form-group">
                                     <label>Payment Status</label>
                                     <select wire:model="payment_status" class="form-control" name="payment_status">
@@ -55,6 +55,19 @@
                                         <option value="Paid">Paid</option>
                                         <option value="Unpaid">Unpaid</option>
                                         <option value="Partial">Partial</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ✅ New Category Filter -->
+                            <div class="col-lg-4">
+                                <div class="form-group">
+                                    <label>Category</label>
+                                    <select wire:model="category_id" class="form-control" name="category_id">
+                                        <option value="">All Categories</option>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->category_name }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                             </div>
@@ -102,17 +115,11 @@
                                 <td>{{ $sale->customer_name }}</td>
                                 <td>
                                     @if ($sale->status == 'Pending')
-                                        <span class="badge badge-info">
-                                    {{ $sale->status }}
-                                </span>
+                                        <span class="badge badge-info">{{ $sale->status }}</span>
                                     @elseif ($sale->status == 'Shipped')
-                                        <span class="badge badge-primary">
-                                    {{ $sale->status }}
-                                </span>
+                                        <span class="badge badge-primary">{{ $sale->status }}</span>
                                     @else
-                                        <span class="badge badge-success">
-                                    {{ $sale->status }}
-                                </span>
+                                        <span class="badge badge-success">{{ $sale->status }}</span>
                                     @endif
                                 </td>
                                 <td>{{ format_currency($sale->total_amount) }}</td>
@@ -120,19 +127,12 @@
                                 <td>{{ format_currency($sale->due_amount) }}</td>
                                 <td>
                                     @if ($sale->payment_status == 'Partial')
-                                        <span class="badge badge-warning">
-                                    {{ $sale->payment_status }}
-                                </span>
+                                        <span class="badge badge-warning">{{ $sale->payment_status }}</span>
                                     @elseif ($sale->payment_status == 'Paid')
-                                        <span class="badge badge-success">
-                                    {{ $sale->payment_status }}
-                                </span>
+                                        <span class="badge badge-success">{{ $sale->payment_status }}</span>
                                     @else
-                                        <span class="badge badge-danger">
-                                    {{ $sale->payment_status }}
-                                </span>
+                                        <span class="badge badge-danger">{{ $sale->payment_status }}</span>
                                     @endif
-
                                 </td>
                             </tr>
                         @empty
