@@ -18,7 +18,7 @@ class UpdateProductRequest extends FormRequest
         return [
             'product_name' => ['required', 'string', 'max:255'],
             'product_code' => ['required', 'string', 'max:255', 'unique:products,product_code,' . $this->product->id],
-            'product_barcode_symbology' => ['required', 'string', 'max:255'],
+            'product_barcode_symbology' => ['nullable', 'string', 'max:255'],
             'product_unit' => ['required', 'string', 'max:255'],
             'product_quantity' => ['required', 'integer', 'min:1'],
             'product_cost' => ['required', 'numeric', 'max:2147483647'],
