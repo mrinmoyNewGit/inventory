@@ -70,21 +70,12 @@ class SaleController extends Controller
                 $width = $cart_item->options->width ?? null;
                 $piece_qty = $cart_item->options->piece_qty ?? null;
 
-                // Determine stored quantity: store in product's original unit (SQM or pcs)
-                $product = Product::findOrFail($cart_item->id);
-                if (strtoupper($product->product_unit) === 'SQM') {
-                    // Cart qty is in sqft (for UI), but we store in SQM
-                    $stored_qty = round($cart_item->qty / 10.7639, 4);
-                } else {
-                    $stored_qty = $cart_item->qty;
-                }
-
                 SaleDetails::create([
                     'sale_id' => $sale->id,
                     'product_id' => $cart_item->id,
                     'product_name' => $cart_item->name,
                     'product_code' => $cart_item->options->code,
-                    'quantity' => $stored_qty, // stored in product's original unit (SQM or pcs)
+                    'quantity' => $cart_item->qty, // already in sqft (as per your comment)
                     'price' => $cart_item->price * 100,
                     'unit_price' => $cart_item->options->unit_price * 100,
                     'sub_total' => $cart_item->options->sub_total * 100,
@@ -98,16 +89,16 @@ class SaleController extends Controller
 
                 // Stock update logic (case-insensitive status & unit handling)
                 if (in_array(strtolower($request->status), ['shipped', 'completed'])) {
-                    // product already loaded above
-                    if (strtoupper($product->product_unit) === 'SQM') {
-                        // stored_qty is already in SQM
-                        $deduct = $stored_qty;
-                    } else {
-                        $deduct = $stored_qty; // pcs or other unit
-                    }
+                    $product = Product::findOrFail($cart_item->id);
 
-                    // atomic decrement
-                    $product->decrement('product_quantity', $deduct);
+                    // If product unit is SQM (case-insensitive), convert sqft -> sqm before deduct
+                    if (strtoupper($product->product_unit) === 'SQM') {
+                        $qty_in_sqm = $cart_item->qty / 10.7639;
+                        $qty_in_sqm = round($qty_in_sqm, 4);
+                        $product->decrement('product_quantity', $qty_in_sqm);
+                    } else {
+                        $product->decrement('product_quantity', $cart_item->qty);
+                    }
                 }
             }
 
@@ -151,25 +142,16 @@ class SaleController extends Controller
             $product = Product::findOrFail($sale_detail->product_id);
 
             // Convert stock and unit if product is in SQM
-            $stock = strtoupper($product->product_unit) === 'SQM'
-                ? round($product->product_quantity * 10.7639, 2) // show stock in sqft for UI
+            $stock = $product->product_unit === 'SQM'
+                ? round($product->product_quantity * 10.7639, 2)
                 : $product->product_quantity;
 
-            $unit = strtoupper($product->product_unit) === 'SQM' ? 'sqft' : ($product->product_unit ?? 'pcs');
-
-            // Determine cart quantity for UI:
-            // sale_detail->quantity is stored in original unit (SQM if applicable),
-            // but cart UI expects sqft for dimension products.
-            if (strtoupper($product->product_unit) === 'SQM') {
-                $cart_qty = round($sale_detail->quantity * 10.7639, 2); // convert sqm -> sqft for UI
-            } else {
-                $cart_qty = $sale_detail->quantity;
-            }
+            $unit = $product->product_unit === 'SQM' ? 'sqft' : ($product->product_unit ?? 'pcs');
 
             $cart->add([
                 'id'      => $sale_detail->product_id,
                 'name'    => $sale_detail->product_name,
-                'qty'     => $cart_qty,
+                'qty'     => $sale_detail->quantity,
                 'price'   => $sale_detail->price,
                 'weight'  => 1,
                 'options' => [
@@ -182,7 +164,7 @@ class SaleController extends Controller
                     'product_tax'           => $sale_detail->product_tax_amount,
                     'unit_price'            => $sale_detail->unit_price,
 
-                    // ✅ Dimensional data
+                    // ✅ New fields for dimensional data
                     'height'     => $sale_detail->height,
                     'width'      => $sale_detail->width,
                     'piece_qty'  => $sale_detail->piece_qty,
@@ -212,10 +194,14 @@ class SaleController extends Controller
                 if (in_array(strtolower($sale->status), ['shipped', 'completed'])) {
                     $product = Product::findOrFail($sale_detail->product_id);
 
-                    // sale_detail->quantity is stored in product's original unit (SQM or pcs)
-                    $restored_qty = $sale_detail->quantity;
+                    if (strtoupper($product->product_unit) === 'SQM') {
+                        // sale_detail->quantity is stored in sqft, convert to sqm to restore
+                        $restored_qty = $sale_detail->quantity / 10.7639;
+                        $restored_qty = round($restored_qty, 4);
+                    } else {
+                        $restored_qty = $sale_detail->quantity;
+                    }
 
-                    // atomic increment
                     $product->increment('product_quantity', $restored_qty);
                 }
 
@@ -245,21 +231,12 @@ class SaleController extends Controller
 
             // Store new sale details and deduct stock according to new status
             foreach (Cart::instance('sale')->content() as $cart_item) {
-                $product = Product::findOrFail($cart_item->id);
-
-                // Determine stored quantity: store in product's original unit (SQM or pcs)
-                if (strtoupper($product->product_unit) === 'SQM') {
-                    $stored_qty = round($cart_item->qty / 10.7639, 4); // convert sqft -> sqm
-                } else {
-                    $stored_qty = $cart_item->qty;
-                }
-
                 SaleDetails::create([
                     'sale_id'                 => $sale->id,
                     'product_id'              => $cart_item->id,
                     'product_name'            => $cart_item->name,
                     'product_code'            => $cart_item->options->code,
-                    'quantity'                => $stored_qty, // stored in original unit
+                    'quantity'                => $cart_item->qty,
                     'price'                   => $cart_item->price * 100,
                     'unit_price'              => $cart_item->options->unit_price * 100,
                     'sub_total'               => $cart_item->options->sub_total * 100,
@@ -274,8 +251,16 @@ class SaleController extends Controller
                 ]);
 
                 if (in_array(strtolower($request->status), ['shipped', 'completed'])) {
-                    // Deduct using stored_qty (already in original unit)
-                    $product->decrement('product_quantity', $stored_qty);
+                    $product = Product::findOrFail($cart_item->id);
+
+                    if (strtoupper($product->product_unit) === 'SQM') {
+                        $deduct_qty = $cart_item->qty / 10.7639; // from sqft to sqm
+                        $deduct_qty = round($deduct_qty, 4);
+                    } else {
+                        $deduct_qty = $cart_item->qty;
+                    }
+
+                    $product->decrement('product_quantity', $deduct_qty);
                 }
             }
 
