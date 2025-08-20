@@ -3,71 +3,31 @@
 namespace App\Livewire;
 
 use Gloudemans\Shoppingcart\Facades\Cart;
-use Illuminate\Support\Facades\Request;
 use Livewire\Component;
 use Modules\Product\Entities\Product;
 
 class ProductCart extends Component
 {
-
     public $listeners = ['productSelected', 'discountModalRefresh'];
 
     public $cart_instance;
     public $global_discount;
     public $global_tax;
     public $shipping;
-    public $quantity;
-    public $check_quantity;
-    public $discount_type;
-    public $item_discount;
-    public $unit_price;
+
+    public $quantity = [];
+    public $check_quantity = [];
+    public $discount_type = [];
+    public $item_discount = [];
+    public $unit_price = [];
     public $data;
-    // For dimension-based sales (height × width × piece_qty = sqft)
+
     public $height = [];
     public $width = [];
     public $piece_qty = [];
 
+    protected const SQM_TO_SQFT = 10.7639;
 
-    private $product;
-
-    // public function mount($cartInstance, $data = null)
-    // {
-    //     $this->cart_instance = $cartInstance;
-
-    //     if ($data) {
-    //         $this->data = $data;
-
-    //         $this->global_discount = $data->discount_percentage;
-    //         $this->global_tax = $data->tax_percentage;
-    //         $this->shipping = $data->shipping_amount;
-
-    //         $this->updatedGlobalTax();
-    //         $this->updatedGlobalDiscount();
-
-    //         $cart_items = Cart::instance($this->cart_instance)->content();
-
-    //         foreach ($cart_items as $cart_item) {
-    //             $this->check_quantity[$cart_item->id] = [$cart_item->options->stock];
-    //             $this->quantity[$cart_item->id] = $cart_item->qty;
-    //             $this->unit_price[$cart_item->id] = $cart_item->price;
-    //             $this->discount_type[$cart_item->id] = $cart_item->options->product_discount_type;
-    //             if ($cart_item->options->product_discount_type == 'fixed') {
-    //                 $this->item_discount[$cart_item->id] = $cart_item->options->product_discount;
-    //             } elseif ($cart_item->options->product_discount_type == 'percentage') {
-    //                 $this->item_discount[$cart_item->id] = round(100 * ($cart_item->options->product_discount / $cart_item->price));
-    //             }
-    //         }
-    //     } else {
-    //         $this->global_discount = 0;
-    //         $this->global_tax = 0;
-    //         $this->shipping = 0.00;
-    //         $this->check_quantity = [];
-    //         $this->quantity = [];
-    //         $this->unit_price = [];
-    //         $this->discount_type = [];
-    //         $this->item_discount = [];
-    //     }
-    // }
     public function mount($cartInstance, $data = null)
     {
         $this->cart_instance = $cartInstance;
@@ -83,27 +43,30 @@ class ProductCart extends Component
             $this->updatedGlobalDiscount();
 
             $cart_items = Cart::instance($this->cart_instance)->content();
-            // dd($cart_items);
 
             foreach ($cart_items as $cart_item) {
-                $product_id = $cart_item->id;
+                $pid = $cart_item->id;
 
-                $this->check_quantity[$product_id] = [$cart_item->options->stock];
-                $this->quantity[$product_id] = $cart_item->qty;
-                $this->unit_price[$product_id] = $cart_item->price;
-                $this->discount_type[$product_id] = $cart_item->options->product_discount_type;
+                // Ensure numeric stock (not array)
+                $this->check_quantity[$pid] = (float) ($cart_item->options->stock ?? 0);
 
-                // Initialize discount value
-                if ($cart_item->options->product_discount_type == 'fixed') {
-                    $this->item_discount[$product_id] = $cart_item->options->product_discount;
-                } elseif ($cart_item->options->product_discount_type == 'percentage') {
-                    $this->item_discount[$product_id] = round(100 * ($cart_item->options->product_discount / $cart_item->price));
+                $this->quantity[$pid] = (float) $cart_item->qty;
+                $this->unit_price[$pid] = (float) $cart_item->price;
+                $this->discount_type[$pid] = $cart_item->options->product_discount_type ?? 'fixed';
+
+                if ($this->discount_type[$pid] === 'fixed') {
+                    $this->item_discount[$pid] = (float) ($cart_item->options->product_discount ?? 0);
+                } elseif ($this->discount_type[$pid] === 'percentage') {
+                    $price = (float) $cart_item->price;
+                    $discountValue = (float) ($cart_item->options->product_discount ?? 0);
+                    $this->item_discount[$pid] = $price > 0 ? round(100 * ($discountValue / $price)) : 0;
+                } else {
+                    $this->item_discount[$pid] = 0;
                 }
 
-                // ✅ Initialize dimensional inputs (if present)
-                $this->height[$cart_item->id] = $cart_item->options->height ?? 1;
-                $this->width[$cart_item->id] = $cart_item->options->width ?? 1;
-                $this->piece_qty[$cart_item->id] = $cart_item->options->piece_qty ?? 1;
+                $this->height[$pid] = (float) ($cart_item->options->height ?? 1);
+                $this->width[$pid] = (float) ($cart_item->options->width ?? 1);
+                $this->piece_qty[$pid] = (float) ($cart_item->options->piece_qty ?? 1);
             }
         } else {
             $this->global_discount = 0;
@@ -116,7 +79,6 @@ class ProductCart extends Component
             $this->discount_type = [];
             $this->item_discount = [];
 
-            // ✅ Also initialize dimensional properties
             $this->height = [];
             $this->width = [];
             $this->piece_qty = [];
@@ -132,13 +94,17 @@ class ProductCart extends Component
         ]);
     }
 
+    // Strict uppercase check as requested
+    protected function productIsSQM(Product $product): bool
+    {
+        return ($product->product_unit === 'SQM');
+    }
+
     public function productSelected($product)
     {
-        // dd($product);
         $cart = Cart::instance($this->cart_instance);
-        //dd($cart);
 
-        $exists = $cart->search(function ($cartItem, $rowId) use ($product) {
+        $exists = $cart->search(function ($cartItem) use ($product) {
             return $cartItem->id == $product['id'];
         });
 
@@ -149,23 +115,31 @@ class ProductCart extends Component
 
         $product_model = Product::findOrFail($product['id']);
 
-        // Accept dimensional inputs if passed from frontend
-        $height = $product['height'] ?? 1;
-        $width = $product['width'] ?? 1;
-        $piece_qty = $product['piece_qty'] ?? 1;
+        $height = isset($product['height']) ? (float) $product['height'] : 1;
+        $width = isset($product['width']) ? (float) $product['width'] : 1;
+        $piece_qty = isset($product['piece_qty']) ? (float) $product['piece_qty'] : 1;
 
-        $qty = 1;
-        if (strtolower($product_model->product_unit) === 'sqm' && $this->cart_instance === 'sale') {
-            $price = round($product_model->price_per_sqft, 2);
-            $stock = round($product_model->stock_in_sqft, 2);
-            $unit = 'sqft';
+        $qty = 1.0;
+        $price = (float) ($product_model->product_price ?? 0);
+        $stock = (float) ($product_model->product_quantity ?? 0);
+        $unit = ($product_model->product_unit ?? 'PC'); // UPPERCASE expected in DB
 
-            // Calculate actual sqft = height × width × number of pieces
-            $qty = $height * $width * $piece_qty;
+        if ($this->productIsSQM($product_model) && $this->cart_instance === 'sale') {
+            // convert product stock (SQM) -> display stock in SQFT
+            $stock = round($product_model->product_quantity * self::SQM_TO_SQFT, 2);
+
+            if (isset($product_model->price_per_sqft) && $product_model->price_per_sqft) {
+                $price = (float) $product_model->price_per_sqft;
+            } else {
+                $price = (float) $product_model->product_price;
+            }
+
+            $unit = 'SQFT';
+            $qty = max(0, $height) * max(0, $width) * max(0, $piece_qty); // stored in SQFT
         } else {
-            $price = $product_model->product_price;
-            $stock = $product_model->product_quantity;
-            $unit = $product_model->product_unit ?? 'pcs';
+            $price = (float) $product_model->product_price;
+            $stock = (float) $product_model->product_quantity;
+            $unit = ($product_model->product_unit ?? 'PC');
         }
 
         $sub_total = $qty * $price;
@@ -185,23 +159,22 @@ class ProductCart extends Component
                 'unit'                  => $unit,
                 'product_tax'           => 0.00,
                 'unit_price'            => $price,
-
-                // ✅ dimensional info
-                'height'     => $height,
-                'width'      => $width,
-                'piece_qty'  => $piece_qty,
+                'height'                => $height,
+                'width'                 => $width,
+                'piece_qty'             => $piece_qty,
             ],
         ]);
-        // dd($cart);
 
-        $this->check_quantity[$product_model->id] = $stock;
-        $this->quantity[$product_model->id] = $qty;
-        $this->discount_type[$product_model->id] = 'fixed';
-        $this->item_discount[$product_model->id] = 0;
+        $pid = $product_model->id;
+        $this->check_quantity[$pid] = $stock;
+        $this->quantity[$pid] = $qty;
+        $this->discount_type[$pid] = 'fixed';
+        $this->item_discount[$pid] = 0;
+        $this->height[$pid] = $height;
+        $this->width[$pid] = $width;
+        $this->piece_qty[$pid] = $piece_qty;
+        $this->unit_price[$pid] = $price;
     }
-
-
-
 
     public function removeItem($row_id)
     {
@@ -218,81 +191,56 @@ class ProductCart extends Component
         Cart::instance($this->cart_instance)->setGlobalDiscount((int)$this->global_discount);
     }
 
-    // public function updateQuantity($row_id, $product_id)
-    // {
-    //     if ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return') {
-    //         if ($this->check_quantity[$product_id] < $this->quantity[$product_id]) {
-    //             session()->flash('message', 'The requested quantity is not available in stock.');
-    //             return;
-    //         }
-    //     }
+    public function updateQuantity($row_id, $product_id)
+    {
+        $cart = Cart::instance($this->cart_instance);
+        $cart_item = $cart->get($row_id);
+        if (!$cart_item) return;
 
-    //     Cart::instance($this->cart_instance)->update($row_id, $this->quantity[$product_id]);
+        $unit = $cart_item->options->unit ?? 'PC';
+        // area if either product was SQM (cart uses SQFT) or unit explicitly SQFT
+        $isAreaCartUnit = in_array($unit, ['SQFT', 'SQM'], true);
 
-    //     $cart_item = Cart::instance($this->cart_instance)->get($row_id);
+        if ($isAreaCartUnit && ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return')) {
+            $calculated_qty = ($this->height[$product_id] ?? 0)
+                            * ($this->width[$product_id] ?? 0)
+                            * ($this->piece_qty[$product_id] ?? 0);
 
-    //     Cart::instance($this->cart_instance)->update($row_id, [
-    //         'options' => [
-    //             'sub_total'             => $cart_item->price * $cart_item->qty,
-    //             'code'                  => $cart_item->options->code,
-    //             'stock'                 => $cart_item->options->stock,
-    //             'unit'                  => $cart_item->options->unit,
-    //             'product_tax'           => $cart_item->options->product_tax,
-    //             'unit_price'            => $cart_item->options->unit_price,
-    //             'product_discount'      => $cart_item->options->product_discount,
-    //             'product_discount_type' => $cart_item->options->product_discount_type,
-    //         ]
-    //     ]);
-    // }
+            $this->quantity[$product_id] = $calculated_qty;
 
-public function updateQuantity($row_id, $product_id)
-{
-    // For sale or purchase return, calculate quantity from dimensions
-    if ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return') {
-        $calculated_qty = ($this->height[$product_id] ?? 0) 
-                        * ($this->width[$product_id] ?? 0) 
-                        * ($this->piece_qty[$product_id] ?? 0);
-
-        $this->quantity[$product_id] = $calculated_qty;
-
-        // Stock check
-        if ($this->check_quantity[$product_id] < $calculated_qty) {
-            session()->flash('message', 'The requested quantity is not available in stock.');
-            return;
+            $available = (float) ($this->check_quantity[$product_id] ?? ($cart_item->options->stock ?? 0));
+            if ($available < $calculated_qty) {
+                session()->flash('message', 'The requested quantity is not available in stock.');
+                return;
+            }
+        } else {
+            $available = (float) ($this->check_quantity[$product_id] ?? ($cart_item->options->stock ?? 0));
+            if ($available < (float) ($this->quantity[$product_id] ?? 0)) {
+                session()->flash('message', 'The requested quantity is not available in stock.');
+                return;
+            }
         }
+
+        $cart->update($row_id, $this->quantity[$product_id]);
+
+        $cart_item = $cart->get($row_id);
+
+        $options = [
+            'sub_total'             => $cart_item->price * $cart_item->qty,
+            'code'                  => $cart_item->options->code ?? '',
+            'stock'                 => $cart_item->options->stock ?? null,
+            'unit'                  => $cart_item->options->unit ?? null,
+            'product_tax'           => $cart_item->options->product_tax ?? null,
+            'unit_price'            => $cart_item->options->unit_price ?? null,
+            'product_discount'      => $cart_item->options->product_discount ?? null,
+            'product_discount_type' => $cart_item->options->product_discount_type ?? null,
+            'height'                => $this->height[$product_id] ?? $cart_item->options->height ?? 1,
+            'width'                 => $this->width[$product_id] ?? $cart_item->options->width ?? 1,
+            'piece_qty'             => $this->piece_qty[$product_id] ?? $cart_item->options->piece_qty ?? 1,
+        ];
+
+        $cart->update($row_id, ['options' => $options]);
     }
-
-    // Update the cart quantity
-    Cart::instance($this->cart_instance)->update($row_id, $this->quantity[$product_id]);
-
-    // Get the updated cart item
-    $cart_item = Cart::instance($this->cart_instance)->get($row_id);
-
-    // Rebuild full options array (preserve everything)
-    $options = [
-        'sub_total'             => $cart_item->price * $cart_item->qty,
-        'code'                  => $cart_item->options->code ?? $this->product_code[$product_id] ?? '',
-        'stock'                 => $cart_item->options->stock ?? null,
-        'unit'                  => $cart_item->options->unit ?? null,
-        'product_tax'           => $cart_item->options->product_tax ?? null,
-        'unit_price'            => $cart_item->options->unit_price ?? null,
-        'product_discount'      => $cart_item->options->product_discount ?? null,
-        'product_discount_type' => $cart_item->options->product_discount_type ?? null,
-
-        // New fields
-        'height'                => $this->height[$product_id] ?? null,
-        'width'                 => $this->width[$product_id] ?? null,
-        'piece_qty'             => $this->piece_qty[$product_id] ?? null,
-    ];
-
-    // Update cart item with full options
-    Cart::instance($this->cart_instance)->update($row_id, [
-        'options' => $options
-    ]);
-}
-
-
-
 
     public function updatedDiscountType($value, $name)
     {
@@ -308,21 +256,23 @@ public function updateQuantity($row_id, $product_id)
     {
         $cart_item = Cart::instance($this->cart_instance)->get($row_id);
 
+        if (!$cart_item) return;
+
         if ($this->discount_type[$product_id] == 'fixed') {
             Cart::instance($this->cart_instance)
                 ->update($row_id, [
-                    'price' => ($cart_item->price + $cart_item->options->product_discount) - $this->item_discount[$product_id]
+                    'price' => ($cart_item->price + ($cart_item->options->product_discount ?? 0)) - $this->item_discount[$product_id]
                 ]);
 
             $discount_amount = $this->item_discount[$product_id];
 
             $this->updateCartOptions($row_id, $product_id, $cart_item, $discount_amount);
         } elseif ($this->discount_type[$product_id] == 'percentage') {
-            $discount_amount = ($cart_item->price + $cart_item->options->product_discount) * ($this->item_discount[$product_id] / 100);
+            $discount_amount = ($cart_item->price + ($cart_item->options->product_discount ?? 0)) * ($this->item_discount[$product_id] / 100);
 
             Cart::instance($this->cart_instance)
                 ->update($row_id, [
-                    'price' => ($cart_item->price + $cart_item->options->product_discount) - $discount_amount
+                    'price' => ($cart_item->price + ($cart_item->options->product_discount ?? 0)) - $discount_amount
                 ]);
 
             $this->updateCartOptions($row_id, $product_id, $cart_item, $discount_amount);
@@ -336,6 +286,7 @@ public function updateQuantity($row_id, $product_id)
         $product = Product::findOrFail($product_id);
 
         $cart_item = Cart::instance($this->cart_instance)->get($row_id);
+        if (!$cart_item) return;
 
         Cart::instance($this->cart_instance)->update($row_id, ['price' => $this->unit_price[$product['id']]]);
 
@@ -349,6 +300,9 @@ public function updateQuantity($row_id, $product_id)
                 'unit_price'            => $this->calculate($product, $this->unit_price[$product['id']])['unit_price'],
                 'product_discount'      => $cart_item->options->product_discount,
                 'product_discount_type' => $cart_item->options->product_discount_type,
+                'height'                => $cart_item->options->height ?? 1,
+                'width'                 => $cart_item->options->width ?? 1,
+                'piece_qty'             => $cart_item->options->piece_qty ?? 1,
             ]
         ]);
     }
@@ -389,19 +343,6 @@ public function updateQuantity($row_id, $product_id)
         return ['price' => $price, 'unit_price' => $unit_price, 'product_tax' => $product_tax, 'sub_total' => $sub_total];
     }
 
-    // public function updateCartOptions($row_id, $product_id, $cart_item, $discount_amount)
-    // {
-    //     Cart::instance($this->cart_instance)->update($row_id, ['options' => [
-    //         'sub_total'             => $cart_item->price * $cart_item->qty,
-    //         'code'                  => $cart_item->options->code,
-    //         'stock'                 => $cart_item->options->stock,
-    //         'unit'                  => $cart_item->options->unit,
-    //         'product_tax'           => $cart_item->options->product_tax,
-    //         'unit_price'            => $cart_item->options->unit_price,
-    //         'product_discount'      => $discount_amount,
-    //         'product_discount_type' => $this->discount_type[$product_id],
-    //     ]]);
-    // }
     public function updateCartOptions($row_id, $product_id, $cart_item, $discount_amount)
     {
         Cart::instance($this->cart_instance)->update($row_id, ['options' => [
@@ -413,11 +354,9 @@ public function updateQuantity($row_id, $product_id)
             'unit_price'            => $cart_item->options->unit_price,
             'product_discount'      => $discount_amount,
             'product_discount_type' => $this->discount_type[$product_id],
-
-            // ✅ retain dimensional data
-            'height'     => $cart_item->options->height ?? 1,
-            'width'      => $cart_item->options->width ?? 1,
-            'piece_qty'  => $cart_item->options->piece_qty ?? 1,
+            'height'                => $cart_item->options->height ?? 1,
+            'width'                 => $cart_item->options->width ?? 1,
+            'piece_qty'             => $cart_item->options->piece_qty ?? 1,
         ]]);
     }
 }
