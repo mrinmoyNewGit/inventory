@@ -70,6 +70,8 @@ class SaleController extends Controller
                 $height = $cart_item->options->height ?? null;
                 $width = $cart_item->options->width ?? null;
                 $piece_qty = $cart_item->options->piece_qty ?? null;
+                $sheets_used = $cart_item->options->sheets_used ?? null;
+                $small_item_qty = $cart_item->options->small_item_qty ?? null;
 
                 SaleDetails::create([
                     'sale_id' => $sale->id,
@@ -86,6 +88,8 @@ class SaleController extends Controller
                     'height' => $height,
                     'width' => $width,
                     'piece_qty' => $piece_qty,
+                    'sheets_used' => $sheets_used,
+                    'small_item_qty' => $small_item_qty,
                 ]);
 
                 if ($request->status == 'Shipped' || $request->status == 'Completed') {
@@ -176,6 +180,8 @@ class SaleController extends Controller
                     'height'                => $sale_detail->height,
                     'width'                 => $sale_detail->width,
                     'piece_qty'             => $sale_detail->piece_qty,
+                    'sheets_used'             => $sale_detail->sheets_used,
+                    'small_item_qty'             => $sale_detail->small_item_qty,
                 ],
             ]);
         }
@@ -250,6 +256,8 @@ class SaleController extends Controller
                     'height'                  => $cart_item->options->height ?? null,
                     'width'                   => $cart_item->options->width ?? null,
                     'piece_qty'               => $cart_item->options->piece_qty ?? null,
+                    'sheets_used'               => $cart_item->options->sheets_used ?? null,
+                    'small_item_qty'               => $cart_item->options->small_item_qty ?? null,
                 ]);
 
                 if ($request->status === 'Shipped' || $request->status === 'Completed') {

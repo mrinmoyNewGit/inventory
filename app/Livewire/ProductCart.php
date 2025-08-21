@@ -25,6 +25,9 @@ class ProductCart extends Component
     public $height = [];
     public $width = [];
     public $piece_qty = [];
+    // NEW: fields for SHEET logic
+    public $sheets_used = [];
+    public $small_item_qty = [];
 
     protected const SQM_TO_SQFT = 10.7639;
 
@@ -67,6 +70,9 @@ class ProductCart extends Component
                 $this->height[$pid] = (float) ($cart_item->options->height ?? 1);
                 $this->width[$pid] = (float) ($cart_item->options->width ?? 1);
                 $this->piece_qty[$pid] = (float) ($cart_item->options->piece_qty ?? 1);
+
+                $this->sheets_used[$pid] = (float) ($cart_item->options->sheets_used ?? 0);
+                $this->small_item_qty[$pid] = (float) ($cart_item->options->small_item_qty ?? 0);
             }
         } else {
             $this->global_discount = 0;
@@ -82,6 +88,9 @@ class ProductCart extends Component
             $this->height = [];
             $this->width = [];
             $this->piece_qty = [];
+
+            $this->sheets_used = [];
+            $this->small_item_qty = [];
         }
     }
 
@@ -115,17 +124,20 @@ class ProductCart extends Component
 
         $product_model = Product::findOrFail($product['id']);
 
+        // defaults
         $height = isset($product['height']) ? (float) $product['height'] : 1;
         $width = isset($product['width']) ? (float) $product['width'] : 1;
         $piece_qty = isset($product['piece_qty']) ? (float) $product['piece_qty'] : 1;
+        $sheets_used = isset($product['sheets_used']) ? (float) $product['sheets_used'] : 0;
+        $small_item_qty = isset($product['small_item_qty']) ? (float) $product['small_item_qty'] : 0;
 
         $qty = 1.0;
         $price = (float) ($product_model->product_price ?? 0);
         $stock = (float) ($product_model->product_quantity ?? 0);
         $unit = ($product_model->product_unit ?? 'PC'); // UPPERCASE expected in DB
 
+        // SQM -> convert to SQFT in cart
         if ($this->productIsSQM($product_model) && $this->cart_instance === 'sale') {
-            // convert product stock (SQM) -> display stock in SQFT
             $stock = round($product_model->product_quantity * self::SQM_TO_SQFT, 2);
 
             if (isset($product_model->price_per_sqft) && $product_model->price_per_sqft) {
@@ -135,8 +147,24 @@ class ProductCart extends Component
             }
 
             $unit = 'SQFT';
-            $qty = max(0, $height) * max(0, $width) * max(0, $piece_qty); // stored in SQFT
-        } else {
+            $qty = max(0, $height) * max(0, $width) * max(0, $piece_qty); // in SQFT
+        }
+        // SHEET logic
+        elseif ($unit === 'SHEET') {
+            // Default: 1 sheet = 1 qty
+            if ($sheets_used > 0) {
+                $qty = $sheets_used;
+            } elseif ($small_item_qty > 0) {
+                // If only small items entered, user must decide how many sheets needed
+                // System will not auto-calculate, just fallback to 1 for safety
+                $qty = 1;
+            } else {
+                $qty = 1;
+            }
+            $stock = (float) $product_model->product_quantity;
+        }
+        // PC or other units
+        else {
             $price = (float) $product_model->product_price;
             $stock = (float) $product_model->product_quantity;
             $unit = ($product_model->product_unit ?? 'PC');
@@ -144,6 +172,7 @@ class ProductCart extends Component
 
         $sub_total = $qty * $price;
 
+        // add to cart
         $cart->add([
             'id'      => $product_model->id,
             'name'    => $product_model->product_name,
@@ -162,6 +191,8 @@ class ProductCart extends Component
                 'height'                => $height,
                 'width'                 => $width,
                 'piece_qty'             => $piece_qty,
+                'sheets_used'           => $sheets_used,
+                'small_item_qty'        => $small_item_qty,
             ],
         ]);
 
@@ -173,6 +204,8 @@ class ProductCart extends Component
         $this->height[$pid] = $height;
         $this->width[$pid] = $width;
         $this->piece_qty[$pid] = $piece_qty;
+        $this->sheets_used[$pid] = $sheets_used;
+        $this->small_item_qty[$pid] = $small_item_qty;
         $this->unit_price[$pid] = $price;
     }
 
@@ -191,6 +224,12 @@ class ProductCart extends Component
         Cart::instance($this->cart_instance)->setGlobalDiscount((int)$this->global_discount);
     }
 
+    /**
+     * Handles updates to cart quantity depending on unit type.
+     * - SQM → area calculation
+     * - PC → direct quantity
+     * - SHEET → sheets_used OR small items to sheets conversion
+     */
     public function updateQuantity($row_id, $product_id)
     {
         $cart = Cart::instance($this->cart_instance);
@@ -198,22 +237,44 @@ class ProductCart extends Component
         if (!$cart_item) return;
 
         $unit = $cart_item->options->unit ?? 'PC';
-        // area if either product was SQM (cart uses SQFT) or unit explicitly SQFT
         $isAreaCartUnit = in_array($unit, ['SQFT', 'SQM'], true);
 
+        // SQM logic
         if ($isAreaCartUnit && ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return')) {
             $calculated_qty = ($this->height[$product_id] ?? 0)
-                            * ($this->width[$product_id] ?? 0)
-                            * ($this->piece_qty[$product_id] ?? 0);
+                * ($this->width[$product_id] ?? 0)
+                * ($this->piece_qty[$product_id] ?? 0);
 
             $this->quantity[$product_id] = $calculated_qty;
-
             $available = (float) ($this->check_quantity[$product_id] ?? ($cart_item->options->stock ?? 0));
+
             if ($available < $calculated_qty) {
                 session()->flash('message', 'The requested quantity is not available in stock.');
                 return;
             }
-        } else {
+        }
+        // SHEET logic
+        elseif ($unit === 'SHEET') {
+            $sheets_used = (float) ($this->sheets_used[$product_id] ?? 0);
+            $small_items = (float) ($this->small_item_qty[$product_id] ?? 0);
+
+            if ($sheets_used > 0) {
+                $this->quantity[$product_id] = $sheets_used;
+            } elseif ($small_items > 0) {
+                // user decides conversion externally, fallback assume 1 sheet
+                $this->quantity[$product_id] = 1;
+            } else {
+                $this->quantity[$product_id] = 1;
+            }
+
+            $available = (float) ($this->check_quantity[$product_id] ?? ($cart_item->options->stock ?? 0));
+            if ($available < $this->quantity[$product_id]) {
+                session()->flash('message', 'The requested number of sheets is not available in stock.');
+                return;
+            }
+        }
+        // PC or other
+        else {
             $available = (float) ($this->check_quantity[$product_id] ?? ($cart_item->options->stock ?? 0));
             if ($available < (float) ($this->quantity[$product_id] ?? 0)) {
                 session()->flash('message', 'The requested quantity is not available in stock.');
@@ -237,6 +298,8 @@ class ProductCart extends Component
             'height'                => $this->height[$product_id] ?? $cart_item->options->height ?? 1,
             'width'                 => $this->width[$product_id] ?? $cart_item->options->width ?? 1,
             'piece_qty'             => $this->piece_qty[$product_id] ?? $cart_item->options->piece_qty ?? 1,
+            'sheets_used'           => $this->sheets_used[$product_id] ?? $cart_item->options->sheets_used ?? 0,
+            'small_item_qty'        => $this->small_item_qty[$product_id] ?? $cart_item->options->small_item_qty ?? 0,
         ];
 
         $cart->update($row_id, ['options' => $options]);
@@ -284,7 +347,6 @@ class ProductCart extends Component
     public function updatePrice($row_id, $product_id)
     {
         $product = Product::findOrFail($product_id);
-
         $cart_item = Cart::instance($this->cart_instance)->get($row_id);
         if (!$cart_item) return;
 
@@ -303,6 +365,8 @@ class ProductCart extends Component
                 'height'                => $cart_item->options->height ?? 1,
                 'width'                 => $cart_item->options->width ?? 1,
                 'piece_qty'             => $cart_item->options->piece_qty ?? 1,
+                'sheets_used'           => $cart_item->options->sheets_used ?? 0,
+                'small_item_qty'        => $cart_item->options->small_item_qty ?? 0,
             ]
         ]);
     }
@@ -357,6 +421,8 @@ class ProductCart extends Component
             'height'                => $cart_item->options->height ?? 1,
             'width'                 => $cart_item->options->width ?? 1,
             'piece_qty'             => $cart_item->options->piece_qty ?? 1,
+            'sheets_used'           => $cart_item->options->sheets_used ?? 0,
+            'small_item_qty'        => $cart_item->options->small_item_qty ?? 0,
         ]]);
     }
 }
