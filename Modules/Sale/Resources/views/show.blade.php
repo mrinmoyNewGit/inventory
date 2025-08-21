@@ -59,51 +59,35 @@
                     </div>
 
                     @php
-                    // helpers
+                    use Modules\Product\Entities\Product;
+
+                    // Helpers
                     $norm = fn($u) => $u ? strtolower(trim($u)) : null;
 
-                    $isPieceUnit = function($u) {
-                    if (!$u) return false;
-                    $u = strtolower(trim($u));
-                    return in_array($u, ['pc','pcs','piece','pieces','pc(s)'], true);
-                    };
-                    $isSheetUnit = function($u) {
-                    if (!$u) return false;
-                    $u = strtolower(trim($u));
-                    return in_array($u, ['sheet', 'sheets'], true);
-                    };
+                    $isPieceUnit = fn($u) => $u && in_array(strtolower(trim($u)), ['pc','pcs','piece','pieces','pc(s)'], true);
+                    $isSheetUnit = fn($u) => $u && in_array(strtolower(trim($u)), ['sheet','sheets'], true);
+                    $isAreaUnit = fn($u) => $u && in_array(strtolower(trim($u)), [
+                    'sqm','m2','m^2','square meter','square meters',
+                    'sqft','ft2','ft^2','square feet','square foot','sq ft','sq. ft.'
+                    ], true);
 
-                    $isAreaUnit = function($u) {
-                    if (!$u) return false;
-                    $u = strtolower(trim($u));
-                    return in_array($u, ['sqm','m2','m^2','square meter','square meters','sqft','ft2','ft^2','square feet','square foot','sq ft','sq. ft.'], true);
-                    };
-
-                    // Prepare rows and detect whether all rows are PC
-                    use Modules\Product\Entities\Product;
                     $rows = [];
-                    $allPc = true;
                     foreach ($sale->saleDetails as $sd) {
-                    // Prefer a relation if exists, else fetch product
+                    // Get product
                     $product = $sd->relationLoaded('product') ? $sd->product : Product::find($sd->product_id);
 
-                    // Determine product unit
-                    $productUnit = null;
-                    if ($product && !empty($product->product_unit)) {
-                    $productUnit = $product->product_unit;
-                    } elseif (!empty($sd->options['unit'])) {
-                    $productUnit = $sd->options['unit'];
-                    } elseif (!empty($sd->original_unit)) {
-                    $productUnit = $sd->original_unit;
-                    } elseif (!empty($sd->product_unit)) {
-                    $productUnit = $sd->product_unit;
-                    }
-
+                    // Determine unit
+                    $productUnit = $product->product_unit ?? $sd->options['unit'] ?? $sd->original_unit ?? $sd->product_unit ?? null;
                     $normalized = $norm($productUnit);
+
                     $isPc = $isPieceUnit($normalized);
+                    $isSheet = $isSheetUnit($normalized);
                     $isArea = $isAreaUnit($normalized) || $isAreaUnit($sd->options['unit'] ?? null);
 
-                    if (!$isPc) $allPc = false;
+                    // Prepare display values
+                    $displayHeight = ($isPc || $isSheet) ? 0 : $sd->height;
+                    $displayWidth = ($isPc || $isSheet) ? 0 : $sd->width;
+                    $displayQty = ($isPc || $isSheet) ? 0 : $sd->quantity;
 
                     $rows[] = [
                     'sd' => $sd,
@@ -111,14 +95,18 @@
                     'unit' => $productUnit,
                     'normalized' => $normalized,
                     'isPc' => $isPc,
+                    'isSheet' => $isSheet,
                     'isArea' => $isArea,
-                    'isSheet' => $isSheetUnit($normalized),
+                    'displayHeight' => $displayHeight,
+                    'displayWidth' => $displayWidth,
+                    'displayQty' => $displayQty,
                     ];
                     }
+
+                    // Determine whether to show height/width/pieces columns
+                    $showDimensions = collect($rows)->contains(fn($r) => $r['isArea']);
                     @endphp
-                    @php
-                    $showDimensions = collect($rows)->contains(fn($r) => $r['isPc'] || $r['isSheet']);
-                    @endphp
+
 
                     <div class="table-responsive-sm">
                         <table class="table table-striped">
@@ -128,7 +116,7 @@
                                     <th class="align-middle">Net Unit Price</th>
 
                                     {{-- Only show these when at least one item is area-type --}}
-                                    @unless($showDimensions)
+                                    @unless(!$showDimensions)
                                     <th class="align-middle">Height</th>
                                     <th class="align-middle">Width</th>
                                     <th class="align-middle">Pieces</th>
@@ -146,30 +134,35 @@
                                 $item = $r['sd'];
                                 $product = $r['product'];
                                 $isPc = $r['isPc'];
+                                $isSheet = $r['isSheet'];
                                 $unitRaw = $r['unit'] ?? ($item->options['unit'] ?? null);
 
                                 // display label: convert SQM label to SQFT, otherwise uppercase product unit
                                 $unitLabel = $unitRaw ?? '';
                                 if (strtolower($unitLabel) === 'sqm') $unitLabel = 'SQFT';
-                                else $unitLabel = $unitLabel ? $unitLabel : '';
+                                else $unitLabel = $unitLabel ? strtoupper($unitLabel) : '';
 
                                 // dims: prefer sale_detail columns then options, else 0
                                 $h = $item->height ?? ($item->options['height'] ?? 0);
                                 $w = $item->width ?? ($item->options['width'] ?? 0);
                                 $p = $item->piece_qty ?? ($item->options['piece_qty'] ?? 0);
 
-                                $displayH = $isPc ? 0 : ($h ?? 0);
-                                $displayW = $isPc ? 0 : ($w ?? 0);
-                                $displayP = $isPc ? 0 : ($p ?? 0);
-                                if($unitLabel === 'SHEET') $displayQty = $item->small_item_qty;
-                                else $displayQty = $item->quantity ?? '';
+                                // For PC or Sheet units, height/width/pieces = 0
+                                $displayH = ($isPc || $isSheet) ? 0 : ($h ?? 0);
+                                $displayW = ($isPc || $isSheet) ? 0 : ($w ?? 0);
+                                $displayP = ($isPc || $isSheet) ? 0 : ($p ?? 0);
+
+                                // For Sheet units, display quantity for billing
+                                if($isSheet) $displayQty = $item->small_item_qty ?? 0;
+                                else $displayQty = $item->quantity ?? 0;
                                 @endphp
+
 
                                 <tr>
                                     <td class="align-middle">{{ $item->product_code }}</td>
                                     <td class="align-middle">{{ format_currency($item->unit_price) }}</td>
 
-                                    @unless($showDimensions)
+                                    @unless(!$showDimensions)
                                     <td class="align-middle text-center">{{ $displayH }}</td>
                                     <td class="align-middle text-center">{{ $displayW }}</td>
                                     <td class="align-middle text-center">{{ $displayP }}</td>
