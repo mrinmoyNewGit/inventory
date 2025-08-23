@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 </head>
 
-<body class="c-app flex-row align-items-center">
+<body class="c-app flex-row align-items-center" style="background: linear-gradient(90deg, #0756b7, #07175f);">
 <div class="container">
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-center">
