@@ -9,10 +9,12 @@
 
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('images/favicon.png') }}">
-    <!-- CoreUI CSS -->
-    <link rel="stylesheet" href="{{ mix('css/app.css') }}" crossorigin="anonymous">
-    <!-- Bootstrap Icons -->
+
+    <!-- Bootstrap Icons (CDN) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+
+    <!-- Vite assets (replaces old mix() calls) -->
+    @vite(['resources/sass/app.scss', 'resources/js/app.js', 'resources/js/chart-config.js'])
 </head>
 
 <body class="c-app flex-row align-items-center" style="background: linear-gradient(90deg, #0756b7, #07175f);">
@@ -29,30 +31,28 @@
                     {{ Session::get('account_deactivated') }}
                 </div>
             @endif
+
             <div class="card p-4 border-0 shadow-sm">
                 <div class="card-body">
                     <form id="login" method="post" action="{{ url('/login') }}">
                         @csrf
                         <h1>Login</h1>
                         <p class="text-muted">Sign In to your account</p>
+
                         <div class="input-group mb-3">
                             <div class="input-group-prepend">
-                                    <span class="input-group-text">
-                                      <i class="bi bi-person"></i>
-                                    </span>
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
                             </div>
                             <input id="email" type="email" class="form-control @error('email') is-invalid @enderror"
-                                   name="email" value="{{ old('email') }}"
-                                   placeholder="Email">
+                                   name="email" value="{{ old('email') }}" placeholder="Email">
                             @error('email')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
                         <div class="input-group mb-4">
                             <div class="input-group-prepend">
-                                    <span class="input-group-text">
-                                      <i class="bi bi-lock"></i>
-                                    </span>
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
                             </div>
                             <input id="password" type="password"
                                    class="form-control @error('password') is-invalid @enderror"
@@ -61,10 +61,10 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
                         <div class="row">
                             <div class="col-4">
-                                <button id="submit" class="btn btn-primary px-4 d-flex align-items-center"
-                                        type="submit">
+                                <button id="submit" class="btn btn-primary px-4 d-flex align-items-center" type="submit">
                                     Login
                                     <div id="spinner" class="spinner-border text-info" role="status"
                                          style="height: 20px;width: 20px;margin-left: 5px;display: none;">
@@ -90,30 +90,24 @@
     </div>
 </div>
 
-<!-- CoreUI -->
-<script src="{{ mix('js/app.js') }}" defer></script>
 <script>
-    let login = document.getElementById('login');
-    let submit = document.getElementById('submit');
-    let email = document.getElementById('email');
-    let password = document.getElementById('password');
-    let spinner = document.getElementById('spinner')
+    const login = document.getElementById('login');
+    const submit = document.getElementById('submit');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const spinner = document.getElementById('spinner');
 
-    login.addEventListener('submit', (e) => {
+    login.addEventListener('submit', () => {
         submit.disabled = true;
-        email.readonly = true;
-        password.readonly = true;
-
+        email.readOnly = true;     // fixed: readOnly (not readonly)
+        password.readOnly = true;  // fixed: readOnly (not readonly)
         spinner.style.display = 'block';
-
-        login.submit();
     });
 
     setTimeout(() => {
         submit.disabled = false;
-        email.readonly = false;
-        password.readonly = false;
-
+        email.readOnly = false;
+        password.readOnly = false;
         spinner.style.display = 'none';
     }, 3000);
 </script>
