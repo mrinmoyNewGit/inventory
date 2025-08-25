@@ -113,7 +113,11 @@
                         <td>(-) {{ format_currency(Cart::instance($cart_instance)->discount()) }}</td>
                     </tr>
                     <tr>
+                        @if($cart_instance === 'purchase')
                         <th>Shipping</th>
+                        @else
+                        <th>Making Charge</th>
+                        @endif
                         <input type="hidden" value="{{ $shipping }}" name="shipping_amount">
                         <td>(+) {{ format_currency($shipping) }}</td>
                     </tr>
@@ -148,7 +152,11 @@
         </div>
         <div class="col-lg-4">
             <div class="form-group">
+                @if ($cart_instance === 'purchase')
                 <label for="shipping_amount">Shipping</label>
+                @else
+                <label for="shipping_amount">Making Charge</label>
+                @endif
                 <input wire:model.blur="shipping" type="number" class="form-control" name="shipping_amount" min="0" value="0" required step="0.01">
             </div>
         </div>
