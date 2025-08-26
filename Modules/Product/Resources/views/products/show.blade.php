@@ -13,9 +13,7 @@
 @section('content')
     <div class="container-fluid mb-4">
         <div class="row mb-3">
-            <div class="col-md-12">
-                {!! \Milon\Barcode\Facades\DNS1DFacade::getBarCodeSVG($product->product_code, $product->product_barcode_symbology, 2, 110) !!}
-            </div>
+            
         </div>
         <div class="row">
             <div class="col-lg-9">
