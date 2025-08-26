@@ -70,6 +70,22 @@
                                         <input id="total_price" type="text" class="form-control" name="total_price" required value="{{ $product->total_price }}">
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="product_order_tax">Tax (%)</label>
+                                        <input type="number" class="form-control" name="product_order_tax" value="{{ $product->product_order_tax }}" min="0" max="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="product_tax_type">Tax type</label>
+                                        <select class="form-control" name="product_tax_type" id="product_tax_type">
+                                            <option value="" selected>None</option>
+                                            <option {{ $product->product_tax_type == 1 ? 'selected' : '' }}  value="1">Exclusive</option>
+                                            <option {{ $product->product_tax_type == 2 ? 'selected' : '' }} value="2">Inclusive</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="col-md-6">
@@ -103,22 +119,7 @@
                             
 
                             <div class="form-row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="product_order_tax">Tax (%)</label>
-                                        <input type="number" class="form-control" name="product_order_tax" value="{{ $product->product_order_tax }}" min="0" max="100">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="product_tax_type">Tax type</label>
-                                        <select class="form-control" name="product_tax_type" id="product_tax_type">
-                                            <option value="" selected>None</option>
-                                            <option {{ $product->product_tax_type == 1 ? 'selected' : '' }}  value="1">Exclusive</option>
-                                            <option {{ $product->product_tax_type == 2 ? 'selected' : '' }} value="2">Inclusive</option>
-                                        </select>
-                                    </div>
-                                </div>
+                                
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label for="product_unit">Unit <i class="bi bi-question-circle-fill text-info" data-toggle="tooltip" data-placement="top" title="This short text will be placed after Product Quantity."></i> <span class="text-danger">*</span></label>
@@ -163,6 +164,29 @@
 @endsection
 
 @push('page_scripts')
+<script>
+    function calculateTax() {
+        let total = parseFloat($('#total_price').val()) || 0;
+        let taxRate = parseFloat($('input[name="product_order_tax"]').val()) || 0;
+        let taxType = $('#product_tax_type').val();
+
+        if (taxType === "1") { // Exclusive
+            let taxAmount = (total * taxRate) / 100;
+            let finalPrice = total + taxAmount;
+            $('#total_price').val(finalPrice.toFixed(2));
+        } else if (taxType === "2") { // Inclusive
+            // If needed, inclusive means price already contains tax
+            // so no change, or you can back-calculate the base price
+            let basePrice = total / (1 + (taxRate / 100));
+            $('#total_price').val(basePrice.toFixed(2));
+        }
+    }
+
+    // Trigger on tax % or tax type change
+    $(document).on('change', '#product_tax_type, input[name="product_order_tax"]', function() {
+        calculateTax();
+    });
+</script>
     <script>
         var uploadedDocumentMap = {}
         Dropzone.options.documentDropzone = {
