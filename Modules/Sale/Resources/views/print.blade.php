@@ -7,6 +7,11 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sale Details</title>
     <link rel="stylesheet" href="{{ public_path('b3/bootstrap.min.css') }}">
+    <style>
+    @page {
+        margin: 8px 5px; /* top/bottom 8px, left/right 5px */
+    }
+</style>
 </head>
 <body>
 <div class="container-fluid">

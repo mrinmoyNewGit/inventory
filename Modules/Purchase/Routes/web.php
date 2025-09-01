@@ -11,6 +11,8 @@
 |
 */
 
+use Barryvdh\DomPDF\Facade\Pdf;
+
 Route::group(['middleware' => 'auth'], function () {
 
     //Generate PDF
@@ -18,12 +20,12 @@ Route::group(['middleware' => 'auth'], function () {
         $purchase = \Modules\Purchase\Entities\Purchase::findOrFail($id);
         $supplier = \Modules\People\Entities\Supplier::findOrFail($purchase->supplier_id);
 
-        $pdf = \PDF::loadView('purchase::print', [
+        $pdf = Pdf::loadView('purchase::print', [
             'purchase' => $purchase,
             'supplier' => $supplier,
-        ])->setPaper('a4');
+        ])->setPaper('a4', 'portrait');
 
-        return $pdf->stream('purchase-'. $purchase->reference .'.pdf');
+        return $pdf->stream('purchase-' . $purchase->reference . '.pdf');
     })->name('purchases.pdf');
 
     //Sales
@@ -36,5 +38,4 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('/purchase-payments/{purchase_id}/edit/{purchasePayment}', 'PurchasePaymentsController@edit')->name('purchase-payments.edit');
     Route::patch('/purchase-payments/update/{purchasePayment}', 'PurchasePaymentsController@update')->name('purchase-payments.update');
     Route::delete('/purchase-payments/destroy/{purchasePayment}', 'PurchasePaymentsController@destroy')->name('purchase-payments.destroy');
-
 });

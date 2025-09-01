@@ -11,37 +11,38 @@
 |
 */
 
+use Barryvdh\DomPDF\Facade\Pdf;
+
 Route::group(['middleware' => 'auth'], function () {
 
     //POS
+    // POS
     Route::get('/app/pos', 'PosController@index')->name('app.pos.index');
     Route::post('/app/pos', 'PosController@store')->name('app.pos.store');
 
-    //Generate PDF
+    // Generate Sale PDF (A4)
     Route::get('/sales/pdf/{id}', function ($id) {
         $sale = \Modules\Sale\Entities\Sale::findOrFail($id);
         $customer = \Modules\People\Entities\Customer::findOrFail($sale->customer_id);
 
-        $pdf = \PDF::loadView('sale::print', [
-            'sale' => $sale,
+        $pdf = Pdf::loadView('sale::print', [
+            'sale'     => $sale,
             'customer' => $customer,
-        ])->setPaper('a4');
+        ])->setPaper('a4', 'portrait'); // or 'landscape' if needed
 
-        return $pdf->stream('sale-'. $sale->reference .'.pdf');
+        return $pdf->stream('sale-' . $sale->reference . '.pdf');
     })->name('sales.pdf');
 
+    // Generate POS Receipt PDF (A7)
     Route::get('/sales/pos/pdf/{id}', function ($id) {
         $sale = \Modules\Sale\Entities\Sale::findOrFail($id);
 
-        $pdf = \PDF::loadView('sale::print-pos', [
+        $pdf = Pdf::loadView('sale::print-pos', [
             'sale' => $sale,
-        ])->setPaper('a7')
-            ->setOption('margin-top', 8)
-            ->setOption('margin-bottom', 8)
-            ->setOption('margin-left', 5)
-            ->setOption('margin-right', 5);
+        ])->setPaper([0, 0, 283, 425]);
+        // Custom size in points for A7 (or adjust as needed)
 
-        return $pdf->stream('sale-'. $sale->reference .'.pdf');
+        return $pdf->stream('sale-' . $sale->reference . '.pdf');
     })->name('sales.pos.pdf');
 
     //Sales
