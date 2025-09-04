@@ -197,7 +197,7 @@
                             <table class="table">
                                 <tbody>
                                     <tr>
-                                        <td class="left"><strong>Discount ({{ $sale->discount_percentage }}%)</strong></td>
+                                        <td class="left"><strong>Discount ({{ $sale->discount_percentage }})</strong></td>
                                         <td class="right">{{ format_currency($sale->discount_amount) }}</td>
                                     </tr>
                                     <tr>

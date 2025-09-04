@@ -221,7 +221,9 @@ class ProductCart extends Component
 
     public function updatedGlobalDiscount()
     {
-        Cart::instance($this->cart_instance)->setGlobalDiscount((int)$this->global_discount);
+        // Cart::instance($this->cart_instance)->setGlobalDiscount((int)$this->global_discount);
+        Cart::instance($this->cart_instance)->setGlobalFixedDiscount($this->global_discount);
+
     }
 
     /**
