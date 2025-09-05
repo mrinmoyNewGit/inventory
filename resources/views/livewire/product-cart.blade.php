@@ -31,7 +31,7 @@
                         </th>
 
                         <th class="align-middle text-center">Discount</th>
-                        <th class="align-middle text-center">Tax</th>
+                        <!-- <th class="align-middle text-center">Tax</th> -->
                         <th class="align-middle text-center">Sub Total</th>
                         <th class="align-middle text-center">Action</th>
                     </tr>
@@ -74,9 +74,9 @@
                             {{ format_currency($cart_item->options->product_discount) }}
                         </td>
 
-                        <td class="align-middle text-center">
+                        <!-- <td class="align-middle text-center">
                             {{ format_currency($cart_item->options->product_tax) }}
-                        </td>
+                        </td> -->
 
                         <td class="align-middle text-center">
                             {{ format_currency($cart_item->subtotal) }}
