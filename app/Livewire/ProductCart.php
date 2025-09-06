@@ -135,9 +135,9 @@ class ProductCart extends Component
             $this->discount_type[$rowId]   = $cart_item->options->product_discount_type ?? 'fixed';
             $this->item_discount[$rowId]   = (float) ($cart_item->options->product_discount ?? 0);
 
-            $this->height[$rowId]          = (float) ($cart_item->options->height ?? 1);
-            $this->width[$rowId]           = (float) ($cart_item->options->width ?? 1);
-            $this->piece_qty[$rowId]       = (float) ($cart_item->options->piece_qty ?? 1);
+            $this->height[$rowId]          = (float) ($cart_item->options->height ?? 0);
+            $this->width[$rowId]           = (float) ($cart_item->options->width ?? 0);
+            $this->piece_qty[$rowId]       = (float) ($cart_item->options->piece_qty ?? 0);
             $this->sheets_used[$rowId]     = (float) ($cart_item->options->sheets_used ?? 0);
             $this->small_item_qty[$rowId]  = (float) ($cart_item->options->small_item_qty ?? 0);
         }
