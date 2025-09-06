@@ -69,9 +69,9 @@ class ProductCart extends Component
         $cart = Cart::instance($this->cart_instance);
         $product_model = Product::findOrFail($product['id']);
 
-        $height = (float)($product['height'] ?? 1);
-        $width = (float)($product['width'] ?? 1);
-        $piece_qty = (float)($product['piece_qty'] ?? 1);
+        $height = (float)($product['height'] ?? 0);
+        $width = (float)($product['width'] ?? 0);
+        $piece_qty = (float)($product['piece_qty'] ?? 0);
         $sheets_used = (float)($product['sheets_used'] ?? 0);
         $small_item_qty = (float)($product['small_item_qty'] ?? 0);
 
@@ -309,9 +309,9 @@ class ProductCart extends Component
             'unit_price'            => $cart_item->options->unit_price,
             'product_discount'      => $discount_amount,
             'product_discount_type' => $this->discount_type[$row_id],
-            'height'                => $cart_item->options->height ?? 1,
-            'width'                 => $cart_item->options->width ?? 1,
-            'piece_qty'             => $cart_item->options->piece_qty ?? 1,
+            'height'                => $cart_item->options->height ?? 0,
+            'width'                 => $cart_item->options->width ?? 0,
+            'piece_qty'             => $cart_item->options->piece_qty ?? 0,
             'sheets_used'           => $cart_item->options->sheets_used ?? 0,
             'small_item_qty'        => $cart_item->options->small_item_qty ?? 0,
         ]]);
