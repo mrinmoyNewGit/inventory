@@ -40,27 +40,33 @@
                     @if($cart_items->isNotEmpty())
                     @foreach($cart_items as $cart_item)
                     <tr>
-                        <td class="align-middle">
+                        <td x-data="{ openCode: false }" wire:key="code-{{ $cart_item->rowId }}" class="align-middle">
                             @if ($cart_instance === 'purchase')
-                            {{ $cart_item->name }}
+                                {{ $cart_item->name }}
                             @endif
                             <br>
-                            <span class="badge badge-success">
+
+                            <span x-show="!openCode" @click="openCode = true" class="badge badge-success p-1">
                                 {{ $cart_item->options->code }}
                             </span>
-                          
-                        </td>
 
-                        <td x-data="{ open{{ $cart_item->rowId }}: false }" class="align-middle text-center">
-                            <!-- Display mode -->
-                            <span x-show="!open{{ $cart_item->rowId }}"
-                                @click="open{{ $cart_item->rowId }} = !open{{ $cart_item->rowId }}">
-                                {{ format_currency($cart_item->price) }}
-                            </span>
-                            <div x-show="open{{ $cart_item->rowId }}">
-                                @include('livewire.includes.product-cart-price')
+                            <div x-show="openCode">
+                                @include('livewire.includes.product-cart-code-change', ['rowId' => $cart_item->rowId])
                             </div>
                         </td>
+
+
+                          <td x-data="{ openPrice: false }" wire:key="price-{{ $cart_item->rowId }}" class="align-middle text-center">
+                            <span x-show="!openPrice" @click="openPrice = true">
+                                {{ format_currency($cart_item->price) }}
+                            </span>
+
+                            <div x-show="openPrice">
+                                @include('livewire.includes.product-cart-price', ['rowId' => $cart_item->rowId])
+                            </div>
+                        </td>
+
+
 
                         <td class="align-middle text-center text-center">
                             <span class="badge badge-info">{{ $cart_item->options->stock . ' ' . $cart_item->options->unit }}</span>

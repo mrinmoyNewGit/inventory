@@ -20,6 +20,7 @@ class ProductCart extends Component
     public $discount_type = [];
     public $item_discount = [];
     public $unit_price = [];
+    public $update_code = [];
     public $data;
 
     public $height = [];
@@ -150,12 +151,12 @@ class ProductCart extends Component
 
         $unit = $cart_item->options->unit ?? 'PC';
 
-        if (in_array($unit, ['SQFT', 'SQM'], true)) {
+        if (in_array($unit, ['SQFT', 'SQM'], true) && ($this->cart_instance == 'sale' || $this->cart_instance == 'purchase_return')) {
             $calculated_qty = ($this->height[$row_id] ?? 0)
                 * ($this->width[$row_id] ?? 0)
                 * ($this->piece_qty[$row_id] ?? 0);
             $this->quantity[$row_id] = $calculated_qty;
-        } elseif ($unit === 'SHEET') {
+        } elseif ($unit === 'SHEET' && $this->cart_instance == 'sale') {
             $sheets_used = (float) ($this->sheets_used[$row_id] ?? 0);
             $small_items = (float) ($this->small_item_qty[$row_id] ?? 0);
             $this->quantity[$row_id] = $sheets_used > 0 ? $sheets_used : ($small_items > 0 ? 1 : 1);
@@ -225,23 +226,42 @@ class ProductCart extends Component
         session()->flash('discount_message' . $row_id, 'Discount added to the product!');
     }
 
-    public function updatePrice($row_id, $price)
+    public function updatePrice($row_id)
     {
         $cart = Cart::instance($this->cart_instance);
         $cart_item = $cart->get($row_id);
         if (!$cart_item) return;
 
-        $this->unit_price[$row_id] = (float) $price;
+        $newPrice = (float) ($this->unit_price[$row_id] ?? $cart_item->price);
 
         $cart->update($row_id, [
-            'price'   => $this->unit_price[$row_id],
+            'price'   => $newPrice,
             'options' => array_merge($cart_item->options->toArray(), [
-                'unit_price' => $this->unit_price[$row_id]
-            ])
+                'unit_price' => $newPrice,
+            ]),
         ]);
 
         $this->refreshCart();
     }
+
+    public function updateCode($row_id)
+    {
+        $cart = Cart::instance($this->cart_instance);
+        $cart_item = $cart->get($row_id);
+        if (!$cart_item) return;
+
+        // New code or fallback to old code
+        $newCode = $this->update_code[$row_id] ?? $cart_item->options->code;
+
+        $cart->update($row_id, [
+            'options' => array_merge($cart_item->options->toArray(), [
+                'code' => $newCode, // update code instead of price
+            ]),
+        ]);
+
+        $this->refreshCart();
+    }
+
 
     public function calculate($product, $new_price = null)
     {

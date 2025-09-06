@@ -136,12 +136,13 @@ class SaleController extends Controller
         return view('sale::show', compact('sale', 'customer'));
     }
 
-    public function edit(Sale $sale)
+   public function edit(Sale $sale)
     {
         abort_if(Gate::denies('edit_sales'), 403);
 
         $sale_details = $sale->saleDetails;
 
+        // clear old sale cart
         Cart::instance('sale')->destroy();
 
         $cart = Cart::instance('sale');
@@ -169,9 +170,10 @@ class SaleController extends Controller
                 'price'   => $sale_detail->price,
                 'weight'  => 1,
                 'options' => [
+                    'uniq'                  => uniqid(), // 🔑 ensures each row stays separate
                     'product_discount'      => $sale_detail->product_discount_amount,
                     'product_discount_type' => $sale_detail->product_discount_type,
-                    // 'sub_total'             => $sale_detail->sub_total,
+                    'sub_total'             => $sale_detail->sub_total,
                     'code'                  => $sale_detail->product_code,
                     'stock'                 => $stock,
                     'unit'                  => $unit,
@@ -180,8 +182,8 @@ class SaleController extends Controller
                     'height'                => $sale_detail->height,
                     'width'                 => $sale_detail->width,
                     'piece_qty'             => $sale_detail->piece_qty,
-                    'sheets_used'             => $sale_detail->sheets_used,
-                    'small_item_qty'             => $sale_detail->small_item_qty,
+                    'sheets_used'           => $sale_detail->sheets_used,
+                    'small_item_qty'        => $sale_detail->small_item_qty,
                 ],
             ]);
         }
